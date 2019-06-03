@@ -1,0 +1,111 @@
+---
+title: "Clustering"
+author: "Xinhao Wang"
+date: "2019/6/3"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+
+library(lattice)
+
+# part(A)
+# 'G' is the number of groups.
+Clustering <- function(matrix.data, G){
+  n.obs <- nrow(matrix.data)
+  #
+  # first step: randomly assigning a group label from 1 to G to each observation;
+  #
+  random.label <- sample(c(1:G),n.obs,replace = TRUE)
+  group.label <- cbind(matrix.data,random.label)
+  #
+  # second step: iterating
+  #
+  re.label <- rep(0,n.obs)
+  nb.iter <- 0
+  #
+  # using repeat loop to iterating until the assignment of observations to groups stops changing.
+  #
+  repeat{
+    # calculate group mean (centres)
+    centres <- aggregate(group.label[,1:4],by=list(label=group.label[,ncol(group.label)]),FUN=mean)
+    for(i in 1:n.obs){
+      d <- c(1:G)
+      for(j in 1:G){
+        d[j] <- apply(matrix.data[i,]-centres[j,2:5],1,function(x) sum(x^2))
+      }
+      re.label[i] <- which(d==min(d))
+    }
+    group.label <- cbind(group.label,re.label)
+    nb.iter <- nb.iter+1
+    #
+    # we find some vector of group label here, once we find two close vector are equal, then break.
+    #
+    if(all(group.label[,ncol(group.label)]==group.label[,ncol(group.label)-1])){
+      break
+    }
+  }
+  #
+  # output the final group data with labels.
+  #
+  final.group <- group.label[,c(1:4,ncol(group.label))]
+  
+  labels <- final.group[,5]
+  centres <- aggregate(final.group[,1:4],by=list(label=final.group[,5]),FUN=mean)
+  total.D <- c(0,0,0)
+  for(j in 1:G){
+    total.D[j] <- sum(apply(final.group[which(final.group$re.label==j),][,1:4] - 
+                              as.matrix(centres[j,2:5]),1,function(x) sum(x^2)))
+  }
+  total.D <- sum(total.D)
+  final.list <- list(labels,centres,nb.iter,total.D)
+  names(final.list) <- c('labels','centres','nb.iter','total.D')
+  return(final.list)
+}
+
+
+
+```
+
+```{r}
+
+#
+# Part(B)
+#
+iris <- iris
+pairs(iris[,1:4],col=c(rep('red',50),rep('blue',50),rep('green',50)))
+
+#
+new.iris <- Clustering(iris[,1:4],G = 3)
+#
+# iris111 is the iris data with new labels.
+#
+iris111 <- cbind(iris[,1:4],new.iris$labels)
+
+# the are 6 pairs of measurements.
+xyplot(Sepal.Length ~ Sepal.Width, group=iris111[,5], data=iris111, 
+       auto.key=list(space="right"), 
+       jitter.x=TRUE, jitter.y=TRUE)
+
+xyplot(Sepal.Length ~ Petal.Length, group=iris111[,5], data=iris111, 
+       auto.key=list(space="right"), 
+       jitter.x=TRUE, jitter.y=TRUE)
+
+xyplot(Sepal.Length ~ Petal.Width, group=iris111[,5], data=iris111, 
+       auto.key=list(space="right"), 
+       jitter.x=TRUE, jitter.y=TRUE)
+
+xyplot(Sepal.Width ~ Petal.Length, group=iris111[,5], data=iris111, 
+       auto.key=list(space="right"), 
+       jitter.x=TRUE, jitter.y=TRUE)
+
+xyplot(Sepal.Width ~ Petal.Width, group=iris111[,5], data=iris111, 
+       auto.key=list(space="right"), 
+       jitter.x=TRUE, jitter.y=TRUE)
+
+xyplot(Petal.Length ~ Petal.Width, group=iris111[,5], data=iris111, 
+       auto.key=list(space="right"), 
+       jitter.x=TRUE, jitter.y=TRUE)
+```
